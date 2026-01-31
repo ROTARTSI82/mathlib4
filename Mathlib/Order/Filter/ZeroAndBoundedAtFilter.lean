@@ -3,9 +3,11 @@ Copyright (c) 2022 Chris Birkbeck. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chris Birkbeck, David Loeffler
 -/
-import Mathlib.Algebra.Module.Submodule.Basic
-import Mathlib.Analysis.Asymptotics.Lemmas
-import Mathlib.Algebra.Algebra.Pi
+module
+
+public import Mathlib.Algebra.Module.Submodule.Basic
+public import Mathlib.Analysis.Asymptotics.Lemmas
+public import Mathlib.Algebra.Algebra.Pi
 
 /-!
 # Zero and Bounded at filter
@@ -16,6 +18,8 @@ that are `ZeroAtFilter`. Similarly, we construct the `Submodule` and `Subalgebra
 that are `BoundedAtFilter`.
 
 -/
+
+@[expose] public section
 
 
 namespace Filter
@@ -38,11 +42,12 @@ nonrec theorem ZeroAtFilter.add [TopologicalSpace β] [AddZeroClass β] [Continu
     ZeroAtFilter l (f + g) := by
   simpa using hf.add hg
 
-nonrec theorem ZeroAtFilter.neg [TopologicalSpace β] [AddGroup β] [ContinuousNeg β] {l : Filter α}
-    {f : α → β} (hf : ZeroAtFilter l f) : ZeroAtFilter l (-f) := by simpa using hf.neg
+nonrec theorem ZeroAtFilter.neg [TopologicalSpace β] [SubtractionMonoid β] [ContinuousNeg β]
+    {l : Filter α} {f : α → β} (hf : ZeroAtFilter l f) : ZeroAtFilter l (-f) := by
+  simpa using hf.neg
 
-theorem ZeroAtFilter.smul [TopologicalSpace β] [Zero 𝕜] [Zero β]
-    [SMulWithZero 𝕜 β] [ContinuousConstSMul 𝕜 β] {l : Filter α} {f : α → β} (c : 𝕜)
+theorem ZeroAtFilter.smul [TopologicalSpace β] [Zero β]
+    [SMulZeroClass 𝕜 β] [ContinuousConstSMul 𝕜 β] {l : Filter α} {f : α → β} (c : 𝕜)
     (hf : ZeroAtFilter l f) : ZeroAtFilter l (c • f) := by simpa using hf.const_smul c
 
 variable (𝕜) in
@@ -118,5 +123,10 @@ def boundedFilterSubalgebra
     (boundedFilterSubmodule 𝕜 l)
     (const_boundedAtFilter l (1 : β))
     (fun f g hf hg ↦ by simpa only [Pi.one_apply, mul_one, norm_mul] using hf.mul hg)
+
+theorem BoundedAtFilter.prod {ι : Type} (s : Finset ι) [SeminormedCommRing β]
+    {l : Filter α} {f : ι → α → β} (h : ∀ i ∈ s, BoundedAtFilter l (f i)) :
+    BoundedAtFilter l (∏ i ∈ s, f i) :=
+  (boundedFilterSubalgebra β l).prod_mem (f := f) h
 
 end Filter

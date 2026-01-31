@@ -3,7 +3,10 @@ Copyright (c) 2018 Kenny Lau. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Mario Carneiro, Kenny Lau
 -/
-import Mathlib.Algebra.Order.Ring.Int
+module
+
+public import Mathlib.Algebra.Group.Int.Defs
+public import Mathlib.Algebra.Order.Group.Unbundled.Basic
 
 /-!
 # Intervals in ℤ
@@ -16,7 +19,8 @@ less than `n`.
 This could be unified with `Data.List.Intervals`. See the TODOs there.
 -/
 
--- Porting note: Many unfolds about `Lean.Internal.coeM`
+@[expose] public section
+
 namespace Int
 
 /-- List enumerating `[m, n)`. This is the ℤ variant of `List.Ico`. -/

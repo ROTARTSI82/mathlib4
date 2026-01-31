@@ -3,7 +3,9 @@ Copyright (c) 2021 Yury Kudryashov. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury Kudryashov
 -/
-import Mathlib.Analysis.BoxIntegral.Partition.Basic
+module
+
+public import Mathlib.Analysis.BoxIntegral.Partition.Basic
 
 /-!
 # Tagged partitions
@@ -22,6 +24,8 @@ requirement.
 rectangular box, box partition
 -/
 
+@[expose] public section
+
 
 noncomputable section
 
@@ -36,7 +40,7 @@ prepartition. For simplicity we require that `tag` is defined for all boxes in `
 we will use only the values of `tag` on the boxes of the partition. -/
 structure TaggedPrepartition (I : Box ι) extends Prepartition I where
   /-- Choice of tagged point of each box in this prepartition:
-    we extend this to a total function, on all boxes in `ι → ℝ`. -/
+  we extend this to a total function, on all boxes in `ι → ℝ`. -/
   tag : Box ι → ι → ℝ
   /-- Each tagged point belongs to `I` -/
   tag_mem_Icc : ∀ J, tag J ∈ Box.Icc I
@@ -66,7 +70,6 @@ theorem iUnion_mk (π : Prepartition I) (f h) : (mk π f h).iUnion = π.iUnion :
 @[simp]
 theorem iUnion_toPrepartition : π.toPrepartition.iUnion = π.iUnion := rfl
 
--- Porting note: Previous proof was `:= Set.mem_iUnion₂`
 @[simp]
 theorem mem_iUnion : x ∈ π.iUnion ↔ ∃ J ∈ π, x ∈ J := by
   convert Set.mem_iUnion₂
@@ -274,7 +277,6 @@ theorem isHenstock_single_iff (hJ : J ≤ I) (h : x ∈ Box.Icc I) :
     IsHenstock (single I J hJ x h) ↔ x ∈ Box.Icc J :=
   forall_mem_single (fun x J => x ∈ Box.Icc J) hJ h
 
---@[simp] -- Porting note: Commented out, because `simp only [isHenstock_single_iff]` simplifies it
 theorem isHenstock_single (h : x ∈ Box.Icc I) : IsHenstock (single I I le_rfl x h) :=
   (isHenstock_single_iff (le_refl I) h).2 h
 

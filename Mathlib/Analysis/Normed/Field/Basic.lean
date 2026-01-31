@@ -3,10 +3,11 @@ Copyright (c) 2018 Patrick Massot. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Patrick Massot, Johannes Hölzl
 -/
-import Mathlib.Algebra.Field.Subfield.Defs
-import Mathlib.Algebra.Order.Group.Pointwise.Interval
-import Mathlib.Algebra.Ring.Regular
-import Mathlib.Analysis.Normed.Ring.Basic
+module
+
+public import Mathlib.Algebra.Field.Subfield.Defs
+public import Mathlib.Algebra.Order.Group.Pointwise.Interval
+public import Mathlib.Analysis.Normed.Ring.Basic
 
 /-!
 # Normed division rings and fields
@@ -22,6 +23,8 @@ given in:
 * AbsoluteValue.toNormedField
 -/
 
+@[expose] public section
+
 -- Guard against import creep.
 assert_not_exists AddChar comap_norm_atTop DilationEquiv Finset.sup_mul_le_mul_sup_of_nonneg
   IsOfFinOrder Isometry.norm_map_of_map_one NNReal.isOpen_Ico_zero Rat.norm_cast_real
@@ -30,7 +33,7 @@ assert_not_exists AddChar comap_norm_atTop DilationEquiv Finset.sup_mul_le_mul_s
 variable {G α β ι : Type*}
 
 open Filter
-open scoped Topology NNReal
+open scoped Topology NNReal ENNReal
 
 /-- A normed division ring is a division ring endowed with a seminorm which satisfies the equality
 `‖x y‖ = ‖x‖ ‖y‖`. -/
@@ -38,65 +41,26 @@ class NormedDivisionRing (α : Type*) extends Norm α, DivisionRing α, MetricSp
   /-- The distance is induced by the norm. -/
   dist_eq : ∀ x y, dist x y = norm (x - y)
   /-- The norm is multiplicative. -/
-  norm_mul' : ∀ a b, norm (a * b) = norm a * norm b
+  protected norm_mul : ∀ a b, norm (a * b) = norm a * norm b
 
 -- see Note [lower instance priority]
 /-- A normed division ring is a normed ring. -/
 instance (priority := 100) NormedDivisionRing.toNormedRing [β : NormedDivisionRing α] :
     NormedRing α :=
-  { β with norm_mul := fun a b => (NormedDivisionRing.norm_mul' a b).le }
+  { β with norm_mul_le a b := (NormedDivisionRing.norm_mul a b).le }
+
+-- see Note [lower instance priority]
+/-- The norm on a normed division ring is strictly multiplicative. -/
+instance (priority := 100) NormedDivisionRing.toNormMulClass [NormedDivisionRing α] :
+    NormMulClass α where
+  norm_mul := NormedDivisionRing.norm_mul
 
 section NormedDivisionRing
 
 variable [NormedDivisionRing α] {a b : α}
 
-@[simp]
-theorem norm_mul (a b : α) : ‖a * b‖ = ‖a‖ * ‖b‖ :=
-  NormedDivisionRing.norm_mul' a b
-
 instance (priority := 900) NormedDivisionRing.to_normOneClass : NormOneClass α :=
   ⟨mul_left_cancel₀ (mt norm_eq_zero.1 (one_ne_zero' α)) <| by rw [← norm_mul, mul_one, mul_one]⟩
-
-instance isAbsoluteValue_norm : IsAbsoluteValue (norm : α → ℝ) where
-  abv_nonneg' := norm_nonneg
-  abv_eq_zero' := norm_eq_zero
-  abv_add' := norm_add_le
-  abv_mul' := norm_mul
-
-@[simp] lemma nnnorm_mul (a b : α) : ‖a * b‖₊ = ‖a‖₊ * ‖b‖₊ := NNReal.eq <| norm_mul a b
-@[simp] lemma enorm_mul (a b : α) : ‖a * b‖ₑ = ‖a‖ₑ * ‖b‖ₑ := by simp [enorm]
-
-/-- `norm` as a `MonoidWithZeroHom`. -/
-@[simps]
-def normHom : α →*₀ ℝ where
-  toFun := (‖·‖)
-  map_zero' := norm_zero
-  map_one' := norm_one
-  map_mul' := norm_mul
-
-/-- `nnnorm` as a `MonoidWithZeroHom`. -/
-@[simps]
-def nnnormHom : α →*₀ ℝ≥0 where
-  toFun := (‖·‖₊)
-  map_zero' := nnnorm_zero
-  map_one' := nnnorm_one
-  map_mul' := nnnorm_mul
-
-@[simp]
-theorem norm_pow (a : α) : ∀ n : ℕ, ‖a ^ n‖ = ‖a‖ ^ n :=
-  (normHom.toMonoidHom : α →* ℝ).map_pow a
-
-@[simp]
-theorem nnnorm_pow (a : α) (n : ℕ) : ‖a ^ n‖₊ = ‖a‖₊ ^ n :=
-  (nnnormHom.toMonoidHom : α →* ℝ≥0).map_pow a n
-
-@[simp] lemma enorm_pow (a : α) (n : ℕ) : ‖a ^ n‖ₑ = ‖a‖ₑ ^ n := by simp [enorm]
-
-protected theorem List.norm_prod (l : List α) : ‖l.prod‖ = (l.map norm).prod :=
-  map_list_prod (normHom.toMonoidHom : α →* ℝ) _
-
-protected theorem List.nnnorm_prod (l : List α) : ‖l.prod‖₊ = (l.map nnnorm).prod :=
-  map_list_prod (nnnormHom.toMonoidHom : α →* ℝ≥0) _
 
 @[simp]
 theorem norm_div (a b : α) : ‖a / b‖ = ‖a‖ / ‖b‖ :=
@@ -155,9 +119,8 @@ lemma norm_eq_one_iff_ne_zero_of_discrete {x : 𝕜} : ‖x‖ = 1 ↔ x ≠ 0 :
   · have : IsOpen {(0 : 𝕜)} := isOpen_discrete {0}
     simp_rw [Metric.isOpen_singleton_iff, dist_eq_norm, sub_zero] at this
     obtain ⟨ε, εpos, h'⟩ := this
-    wlog h : ‖x‖ < 1 generalizing 𝕜 with H
-    · push_neg at h
-      rcases h.eq_or_lt with h|h
+    wlog! h : ‖x‖ < 1 generalizing 𝕜 with H
+    · rcases h.eq_or_lt with h | h
       · rw [h]
       replace h := norm_inv x ▸ inv_lt_one_of_one_lt₀ h
       rw [← inv_inj, inv_one, ← norm_inv]
@@ -170,16 +133,13 @@ lemma norm_eq_one_iff_ne_zero_of_discrete {x : 𝕜} : ‖x‖ = 1 ↔ x ≠ 0 :
 @[simp]
 lemma norm_le_one_of_discrete
     (x : 𝕜) : ‖x‖ ≤ 1 := by
-  rcases eq_or_ne x 0 with rfl|hx
+  rcases eq_or_ne x 0 with rfl | hx
   · simp
   · simp [norm_eq_one_iff_ne_zero_of_discrete.mpr hx]
 
 lemma unitClosedBall_eq_univ_of_discrete : (Metric.closedBall 0 1 : Set 𝕜) = Set.univ := by
   ext
   simp
-
-@[deprecated (since := "2024-12-01")]
-alias discreteTopology_unit_closedBall_eq_univ := unitClosedBall_eq_univ_of_discrete
 
 end Discrete
 
@@ -192,7 +152,7 @@ class NormedField (α : Type*) extends Norm α, Field α, MetricSpace α where
   /-- The distance is induced by the norm. -/
   dist_eq : ∀ x y, dist x y = norm (x - y)
   /-- The norm is multiplicative. -/
-  norm_mul' : ∀ a b, norm (a * b) = norm a * norm b
+  protected norm_mul : ∀ a b, norm (a * b) = norm a * norm b
 
 /-- A nontrivially normed field is a normed field in which there is an element of norm different
 from `0` and `1`. This makes it possible to bring any element arbitrarily close to `0` by
@@ -202,7 +162,7 @@ class NontriviallyNormedField (α : Type*) extends NormedField α where
   non_trivial : ∃ x : α, 1 < ‖x‖
 
 /-- A densely normed field is a normed field for which the image of the norm is dense in `ℝ≥0`,
-which means it is also nontrivially normed. However, not all nontrivally normed fields are densely
+which means it is also nontrivially normed. However, not all nontrivially normed fields are densely
 normed; in particular, the `Padic`s exhibit this fact. -/
 class DenselyNormedField (α : Type*) extends NormedField α where
   /-- The range of the norm is dense in the collection of nonnegative real numbers. -/
@@ -226,15 +186,7 @@ instance (priority := 100) NormedField.toNormedDivisionRing : NormedDivisionRing
 
 -- see Note [lower instance priority]
 instance (priority := 100) NormedField.toNormedCommRing : NormedCommRing α :=
-  { ‹NormedField α› with norm_mul := fun a b => (norm_mul a b).le }
-
-@[simp]
-theorem norm_prod (s : Finset β) (f : β → α) : ‖∏ b ∈ s, f b‖ = ∏ b ∈ s, ‖f b‖ :=
-  map_prod normHom.toMonoidHom f s
-
-@[simp]
-theorem nnnorm_prod (s : Finset β) (f : β → α) : ‖∏ b ∈ s, f b‖₊ = ∏ b ∈ s, ‖f b‖₊ :=
-  map_prod nnnormHom.toMonoidHom f s
+  { ‹NormedField α› with norm_mul_le a b := (norm_mul a b).le }
 
 end NormedField
 
@@ -247,17 +199,42 @@ variable (α) [NontriviallyNormedField α]
 theorem exists_one_lt_norm : ∃ x : α, 1 < ‖x‖ :=
   ‹NontriviallyNormedField α›.non_trivial
 
+theorem exists_one_lt_nnnorm : ∃ x : α, 1 < ‖x‖₊ := exists_one_lt_norm α
+
+theorem exists_one_lt_enorm : ∃ x : α, 1 < ‖x‖ₑ :=
+  exists_one_lt_nnnorm α |>.imp fun _ => ENNReal.coe_lt_coe.mpr
+
 theorem exists_lt_norm (r : ℝ) : ∃ x : α, r < ‖x‖ :=
   let ⟨w, hw⟩ := exists_one_lt_norm α
   let ⟨n, hn⟩ := pow_unbounded_of_one_lt r hw
   ⟨w ^ n, by rwa [norm_pow]⟩
 
+theorem exists_lt_nnnorm (r : ℝ≥0) : ∃ x : α, r < ‖x‖₊ := exists_lt_norm α r
+
+theorem exists_lt_enorm {r : ℝ≥0∞} (hr : r ≠ ∞) : ∃ x : α, r < ‖x‖ₑ := by
+  lift r to ℝ≥0 using hr
+  exact mod_cast exists_lt_nnnorm α r
+
 theorem exists_norm_lt {r : ℝ} (hr : 0 < r) : ∃ x : α, 0 < ‖x‖ ∧ ‖x‖ < r :=
   let ⟨w, hw⟩ := exists_lt_norm α r⁻¹
   ⟨w⁻¹, by rwa [← Set.mem_Ioo, norm_inv, ← Set.mem_inv, Set.inv_Ioo_0_left hr]⟩
 
+theorem exists_nnnorm_lt {r : ℝ≥0} (hr : 0 < r) : ∃ x : α, 0 < ‖x‖₊ ∧ ‖x‖₊ < r :=
+  exists_norm_lt α hr
+
+/-- TODO: merge with `_root_.exists_enorm_lt`. -/
+theorem exists_enorm_lt {r : ℝ≥0∞} (hr : 0 < r) : ∃ x : α, 0 < ‖x‖ₑ ∧ ‖x‖ₑ < r :=
+  match r with
+  | ∞ => exists_one_lt_enorm α |>.imp fun _ hx => ⟨zero_le_one.trans_lt hx, ENNReal.coe_lt_top⟩
+  | (r : ℝ≥0) => exists_nnnorm_lt α (ENNReal.coe_pos.mp hr) |>.imp fun _ =>
+    And.imp ENNReal.coe_pos.mpr ENNReal.coe_lt_coe.mpr
+
 theorem exists_norm_lt_one : ∃ x : α, 0 < ‖x‖ ∧ ‖x‖ < 1 :=
   exists_norm_lt α one_pos
+
+theorem exists_nnnorm_lt_one : ∃ x : α, 0 < ‖x‖₊ ∧ ‖x‖₊ < 1 := exists_norm_lt_one _
+
+theorem exists_enorm_lt_one : ∃ x : α, 0 < ‖x‖ₑ ∧ ‖x‖ₑ < 1 := exists_enorm_lt _ one_pos
 
 variable {α}
 
@@ -266,11 +243,8 @@ theorem nhdsNE_neBot (x : α) : NeBot (𝓝[≠] x) := by
   rw [← mem_closure_iff_nhdsWithin_neBot, Metric.mem_closure_iff]
   rintro ε ε0
   rcases exists_norm_lt α ε0 with ⟨b, hb0, hbε⟩
-  refine ⟨x + b, mt (Set.mem_singleton_iff.trans add_right_eq_self).1 <| norm_pos_iff.1 hb0, ?_⟩
+  refine ⟨x + b, mt (Set.mem_singleton_iff.trans add_eq_left).1 <| norm_pos_iff.1 hb0, ?_⟩
   rwa [dist_comm, dist_eq_norm, add_sub_cancel_left]
-
-@[deprecated (since := "2025-03-02")]
-alias punctured_nhds_neBot := nhdsNE_neBot
 
 @[instance]
 theorem nhdsWithin_isUnit_neBot : NeBot (𝓝[{ x : α | IsUnit x }] 0) := by
@@ -311,15 +285,15 @@ def NontriviallyNormedField.ofNormNeOne {𝕜 : Type*} [h' : NormedField 𝕜]
   toNormedField := h'
   non_trivial := by
     rcases h with ⟨x, hx, hx1⟩
-    rcases hx1.lt_or_lt with hlt | hlt
+    rcases hx1.lt_or_gt with hlt | hlt
     · use x⁻¹
       rw [norm_inv]
       exact (one_lt_inv₀ (norm_pos_iff.2 hx)).2 hlt
     · exact ⟨x, hlt⟩
 
 noncomputable instance Real.normedField : NormedField ℝ :=
-  { Real.normedAddCommGroup, Real.field with
-    norm_mul' := abs_mul }
+  { Real.normedAddCommGroup, Real.instField with
+    norm_mul := abs_mul }
 
 noncomputable instance Real.denselyNormedField : DenselyNormedField ℝ where
   lt_norm_lt _ _ h₀ hr :=
@@ -351,9 +325,7 @@ See note [reducible non-instances] -/
 abbrev NormedDivisionRing.induced [DivisionRing R] [NormedDivisionRing S]
     [NonUnitalRingHomClass F R S] (f : F) (hf : Function.Injective f) : NormedDivisionRing R :=
   { NormedAddCommGroup.induced R S f hf, ‹DivisionRing R› with
-    norm_mul' := fun x y => by
-      show ‖f (x * y)‖ = ‖f x‖ * ‖f y‖
-      exact (map_mul f x y).symm ▸ norm_mul (f x) (f y) }
+    norm_mul x y := show ‖f _‖ = _ from (map_mul f x y).symm ▸ norm_mul (f x) (f y) }
 
 /-- An injective non-unital ring homomorphism from a `Field` to a `NormedRing` induces a
 `NormedField` structure on the domain.
@@ -385,6 +357,6 @@ namespace AbsoluteValue
 noncomputable def toNormedField {K : Type*} [Field K] (v : AbsoluteValue K ℝ) : NormedField K where
   toField := inferInstanceAs (Field K)
   __ := v.toNormedRing
-  norm_mul' := v.map_mul
+  norm_mul := v.map_mul
 
 end AbsoluteValue

@@ -21,7 +21,7 @@ groups.
 
 variable {𝓕 E F : Type*}
 
-open Filter Function Metric Bornology
+open Filter Function Metric Bornology Finset
 open scoped ENNReal NNReal Uniformity Pointwise Topology
 
 section SeminormedGroup
@@ -187,15 +187,15 @@ theorem uniformContinuous_norm' : UniformContinuous (norm : E → ℝ) :=
 theorem uniformContinuous_nnnorm' : UniformContinuous fun a : E => ‖a‖₊ :=
   uniformContinuous_norm'.subtype_mk _
 
-end SeminormedGroup
+namespace AntilipschitzWith
 
-section SeminormedCommGroup
+@[to_additive le_mul_norm_sub]
+theorem le_mul_norm_div {K : ℝ≥0} {f : E → F} (hf : AntilipschitzWith K f) (x y : E) :
+    ‖x / y‖ ≤ K * ‖f x / f y‖ := by simp [← dist_eq_norm_div, hf.le_mul_dist x y]
 
-variable [SeminormedCommGroup E] [SeminormedCommGroup F] {a₁ a₂ b₁ b₂ : E} {r₁ r₂ : ℝ}
+end AntilipschitzWith
 
-@[to_additive]
-instance NormedGroup.to_isIsometricSMul_left : IsIsometricSMul E E :=
-  ⟨fun a => Isometry.of_dist_eq fun b c => by simp [dist_eq_norm_div]⟩
+variable [IsIsometricSMul E E] {a₁ a₂ b₁ b₂ : E} {r₁ r₂ : ℝ}
 
 @[to_additive (attr := simp)]
 theorem dist_self_mul_right (a b : E) : dist a (a * b) = ‖b‖ := by
@@ -237,8 +237,6 @@ theorem abs_dist_sub_le_dist_mul_mul (a₁ a₂ b₁ b₂ : E) :
   simpa only [dist_mul_left, dist_mul_right, dist_comm b₂] using
     abs_dist_sub_le (a₁ * a₂) (b₁ * b₂) (b₁ * a₂)
 
-open Finset
-
 @[to_additive]
 theorem nndist_mul_mul_le (a₁ a₂ b₁ b₂ : E) :
     nndist (a₁ * a₂) (b₁ * b₂) ≤ nndist a₁ b₁ + nndist a₂ b₂ :=
@@ -252,8 +250,7 @@ theorem edist_mul_mul_le (a₁ a₂ b₁ b₂ : E) :
   apply nndist_mul_mul_le
 
 section PseudoEMetricSpace
-variable {α E : Type*} [SeminormedCommGroup E] [PseudoEMetricSpace α] {K Kf Kg : ℝ≥0}
-  {f g : α → E} {s : Set α}
+variable {α : Type*} [PseudoEMetricSpace α] {K Kf Kg : ℝ≥0} {f g : α → E} {s : Set α}
 
 @[to_additive (attr := simp)]
 lemma lipschitzWith_inv_iff : LipschitzWith K f⁻¹ ↔ LipschitzWith K f := by simp [LipschitzWith]
@@ -343,17 +340,47 @@ theorem mul_lipschitzWith (hf : AntilipschitzWith Kf f) (hg : LipschitzWith Kg g
       sub_le_sub (hf.mul_le_dist x y) (hg.dist_le_mul x y)
     _ ≤ _ := le_trans (le_abs_self _) (abs_dist_sub_le_dist_mul_mul _ _ _ _)
 
+end AntilipschitzWith
+end PseudoEMetricSpace
+
+-- See note [lower instance priority]
+@[to_additive]
+instance (priority := 100) SeminormedGroup.to_lipschitzMul : LipschitzMul E :=
+  ⟨⟨1 + 1, LipschitzWith.prod_fst.mul LipschitzWith.prod_snd⟩⟩
+
+-- See note [lower instance priority]
+/-- A seminormed group is a uniform group, i.e., multiplication and division are uniformly
+continuous. -/
+@[to_additive /-- A seminormed group is a uniform additive group, i.e., addition and subtraction are
+uniformly continuous. -/]
+instance (priority := 100) SeminormedGroup.to_isUniformGroup : IsUniformGroup E :=
+  ⟨(LipschitzWith.prod_fst.div LipschitzWith.prod_snd).uniformContinuous⟩
+
+-- short-circuit type class inference
+-- See note [lower instance priority]
+@[to_additive]
+instance (priority := 100) SeminormedGroup.toIsTopologicalGroup : IsTopologicalGroup E :=
+  inferInstance
+
+end SeminormedGroup
+
+section SeminormedCommGroup
+variable [SeminormedCommGroup E] {a₁ a₂ b₁ b₂ : E} {r₁ r₂ : ℝ}
+
+-- See note [lower instance priority]
+@[to_additive]
+instance (priority := 100) NormedGroup.to_isIsometricSMul_left : IsIsometricSMul E E :=
+  ⟨fun a => Isometry.of_dist_eq fun b c => by simp [dist_eq_norm_div]⟩
+
+namespace AntilipschitzWith
+variable {α : Type*} [PseudoEMetricSpace α] {Kf Kg : ℝ≥0} {f g : α → E}
+
 @[to_additive]
 theorem mul_div_lipschitzWith (hf : AntilipschitzWith Kf f) (hg : LipschitzWith Kg (g / f))
     (hK : Kg < Kf⁻¹) : AntilipschitzWith (Kf⁻¹ - Kg)⁻¹ g := by
   simpa only [Pi.div_apply, mul_div_cancel] using hf.mul_lipschitzWith hg hK
 
-@[to_additive le_mul_norm_sub]
-theorem le_mul_norm_div {f : E → F} (hf : AntilipschitzWith K f) (x y : E) :
-    ‖x / y‖ ≤ K * ‖f x / f y‖ := by simp [← dist_eq_norm_div, hf.le_mul_dist x y]
-
 end AntilipschitzWith
-end PseudoEMetricSpace
 
 -- See note [lower instance priority]
 @[to_additive]

@@ -594,7 +594,7 @@ jobs:
       - name: Upload cache to Azure
         shell: bash
         run: |
-          cd pr-artifact/pr-branch
+          cd pr-artifact
 
           # Trim trailing whitespace from secrets to prevent issues with accidentally added spaces
           export MATHLIB_CACHE_SAS="${MATHLIB_CACHE_SAS_RAW%"${MATHLIB_CACHE_SAS_RAW##*[![:space:]]}"}"

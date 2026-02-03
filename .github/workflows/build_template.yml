@@ -584,6 +584,12 @@ jobs:
       - name: build cache executable
         run: |
           lake build cache
+          CACHE_BIN="$(pwd)/.lake/build/bin/cache"
+          if [ ! -x "$CACHE_BIN" ]; then
+            echo "cache binary not found: $CACHE_BIN"
+            exit 1
+          fi
+          echo "CACHE_BIN=$CACHE_BIN" >> "$GITHUB_ENV"
 
       - name: Download mathlib4 artifact
         uses: actions/download-artifact@v4
@@ -595,6 +601,7 @@ jobs:
         shell: bash
         run: |
           cd pr-artifact
+          ls
 
           # Trim trailing whitespace from secrets to prevent issues with accidentally added spaces
           export MATHLIB_CACHE_SAS="${MATHLIB_CACHE_SAS_RAW%"${MATHLIB_CACHE_SAS_RAW##*[![:space:]]}"}"
@@ -606,7 +613,7 @@ jobs:
           # do not try to upload files just downloaded
 
           echo "Uploading cache to Azure..."
-          MATHLIB_CACHE_USE_CLOUDFLARE=0 ../../.lake/build/bin/cache --repo=${{ github.event.pull_request.head.repo.full_name || github.repository }} put-unpacked
+          MATHLIB_CACHE_USE_CLOUDFLARE=0 "$CACHE_BIN" --repo=${{ github.event.pull_request.head.repo.full_name || github.repository }} put-unpacked
         env:
           MATHLIB_CACHE_SAS_RAW: ${{ secrets.MATHLIB_CACHE_SAS }}
 
@@ -620,8 +627,8 @@ jobs:
           export MATHLIB_CACHE_SAS="${MATHLIB_CACHE_SAS_RAW%"${MATHLIB_CACHE_SAS_RAW##*[![:space:]]}"}"
 
           echo "Uploading Archive and Counterexamples cache to Azure..."
-          MATHLIB_CACHE_USE_CLOUDFLARE=0 ../../.lake/build/bin/cache --repo=${{ github.event.pull_request.head.repo.full_name || github.repository }} put-unpacked Archive.lean
-          MATHLIB_CACHE_USE_CLOUDFLARE=0 ../../.lake/build/bin/cache --repo=${{ github.event.pull_request.head.repo.full_name || github.repository }} put-unpacked Counterexamples.lean
+          MATHLIB_CACHE_USE_CLOUDFLARE=0 "$CACHE_BIN" --repo=${{ github.event.pull_request.head.repo.full_name || github.repository }} put-unpacked Archive.lean
+          MATHLIB_CACHE_USE_CLOUDFLARE=0 "$CACHE_BIN" --repo=${{ github.event.pull_request.head.repo.full_name || github.repository }} put-unpacked Counterexamples.lean
         env:
           MATHLIB_CACHE_SAS_RAW: ${{ secrets.MATHLIB_CACHE_SAS }}
 

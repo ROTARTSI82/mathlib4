@@ -525,13 +525,13 @@ def mkPutConfigContent (repo : String) (files : Array FilePath) (token : String)
 
 /-- Calls `curl` to send a set of files to the server -/
 def putFilesAbsolute
-  (repo : String) (files : Array FilePath)
+  (repo : String) (files : Array FilePath) (tempConfigFilePath : FilePath)
   (overwrite : Bool) (token : String) : IO Unit := do
   -- TODO: reimplement using HEAD requests?
   let _ := overwrite
   let size := files.size
   if size > 0 then
-    IO.FS.writeFile IO.CURLCFG (← mkPutConfigContent repo files token)
+    IO.FS.writeFile tempConfigFilePath (← mkPutConfigContent repo files token)
     IO.println s!"Attempting to upload {size} file(s) to {repo} cache"
     let args := if useCloudflareCache then
       -- TODO: reimplement using HEAD requests?
@@ -544,9 +544,9 @@ def putFilesAbsolute
     let args := args ++ #[
       "-X", "PUT", "--parallel",
       "--retry", "5", -- there seem to be some intermittent failures
-      "--write-out", "%{json}\n", "--config", IO.CURLCFG.toString]
+      "--write-out", "%{json}\n", "--config", tempConfigFilePath.toString]
     discard <| monitorCurl args size "Uploaded" "speed_upload"
-    IO.FS.removeFile IO.CURLCFG
+    IO.FS.removeFile tempConfigFilePath
   else IO.println "No files to upload"
 
 /-- Calls `curl` to send a set of cached files to the server -/
@@ -555,7 +555,7 @@ def putFiles
   (overwrite : Bool) (token : String) : IO Unit := do
   -- TODO: reimplement using HEAD requests?
   let files : Array FilePath := fileNames.map (fun (f : String) => (IO.CACHEDIR / f))
-  putFilesAbsolute repo files overwrite token
+  putFilesAbsolute repo files IO.CURLCFG overwrite token
 end Put
 
 section Stage

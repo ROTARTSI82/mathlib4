@@ -119,9 +119,8 @@ def main (args : List String) : IO Unit := do
     let repo := repo?.getD MATHLIBREPO
     if !(←stagingDir.isDir) then IO.println "--staging-dir must be a directory" return
     else
-      IO.println "--staging-dir is a directory"
       let fileSet ← getFilesWithExtension stagingDir "ltar"
-      putFilesAbsolute repo fileSet (overwrite := false) (← getToken)
+      putFilesAbsolute repo fileSet (tempConfigFilePath := stagingDir / "curl.config") (overwrite := false) (← getToken)
 
   match args with
   | "get"  :: args => get args

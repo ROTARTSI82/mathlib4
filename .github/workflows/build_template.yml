@@ -90,7 +90,7 @@ jobs:
           # Recall that on the `leanprover-community/mathlib4-nightly-testing` repository,
           # we don't maintain a `master` branch at all.
           # For PRs and pushes to this repository, we will use `nightly-testing` instead.
-          ref: ci-dev/marcelo/2026/01/PushCacheSeparateJob #${{ github.repository == 'leanprover-community/mathlib4-nightly-testing' && 'nightly-testing' || 'master' }}
+          ref: ci-dev/marcelo/2026/01/PushCacheSeparateJob # ${{ github.repository == 'leanprover-community/mathlib4-nightly-testing' && 'nightly-testing' || 'master' }}
           path: master-branch
 
       # Checkout the PR branch into a subdirectory
@@ -323,7 +323,7 @@ jobs:
             ../master-branch/.lake/build/bin/cache get
 
             # Run again with --repo, to ensure we actually get the oleans.
-            ../master-branch/.lake/build/bin/cache --repo=${{ github.event.pull_request.head.repo.full_name || github.repository }} get
+            ../master-branch/.lake/build/bin/cache --repo=ci-dev/${{ github.event.pull_request.head.repo.full_name || github.repository }} get
           else
             echo "WARNING: 'lake build --no-build -v Mathlib.Init' failed."
             echo "No cache for 'Mathlib.Init' available or it could not be prepared."
@@ -666,14 +666,14 @@ jobs:
           # Run once without --repo, so we can diagnose what `lake exe cache get` wants to do by itself.
           lake exe cache get
           # Run again with --repo, so ensure we actually get the oleans.
-          lake exe cache --repo=${{ github.event.pull_request.head.repo.full_name || github.repository }} get
+          lake exe cache --repo=ci-dev/${{ github.event.pull_request.head.repo.full_name || github.repository }} get
 
       - name: get cache for Archive and Counterexamples
         run: |
           # Run once without --repo, so we can diagnose what `lake exe cache get` wants to do by itself.
           lake exe cache get Archive Counterexamples
           # Run again with --repo, so ensure we actually get the oleans.
-          lake exe cache --repo=${{ github.event.pull_request.head.repo.full_name || github.repository }} get Archive Counterexamples
+          lake exe cache --repo=ci-dev/${{ github.event.pull_request.head.repo.full_name || github.repository }} get Archive Counterexamples
 
       - name: verify that everything was available in the cache
         run: |

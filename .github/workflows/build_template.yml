@@ -29,6 +29,7 @@ jobs:
       build-outcome: ${{ steps.build.outcome }}
       archive-outcome: ${{ steps.archive.outcome }}
       counterexamples-outcome: ${{ steps.counterexamples.outcome }}
+      cache-staging-has-files: ${{ steps.cache_staging_check.outputs.has_files }}
       get-cache-outcome: ${{ steps.get.outcome }}
       lint-outcome: ${{ steps.lint.outcome }}
       mk_all-outcome: ${{ steps.mk_all.outcome }}
@@ -426,8 +427,19 @@ jobs:
           cd pr-branch
           lake env ../master-branch/.lake/build/bin/cache --staging-dir="../cache-staging" stage-unpacked Counterexamples.lean
 
-      - name: upload cache staging artifact
+      - name: check cache staging contents
+        id: cache_staging_check
         if: ${{ steps.build.outcome == 'success' }}
+        shell: bash
+        run: |
+          if find cache-staging -type f -name '*.ltar' -print -quit | grep -q .; then
+            echo "has_files=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_files=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: upload cache staging artifact
+        if: ${{ steps.cache_staging_check.outputs.has_files == 'true' }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: cache-staging
@@ -597,7 +609,7 @@ jobs:
     # We only upload the cache if the build started (whether succeeding, failing, or cancelled)
     # but not if any earlier step failed or was cancelled.
     # See discussion at https://leanprover.zulipchat.com/#narrow/stream/287929-mathlib4/topic/Some.20files.20not.20found.20in.20the.20cache/near/407183836
-    if: ${{ always() && needs.build.outputs.build-outcome == 'success' && needs.build.outputs.get-cache-outcome == 'success' }}
+    if: ${{ always() && needs.build.outputs.build-outcome == 'success' && needs.build.outputs.get-cache-outcome == 'success' && needs.build.outputs.cache-staging-has-files == 'true' }}
     steps:
       - name: Checkout master branch
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -636,7 +648,7 @@ jobs:
           export MATHLIB_CACHE_SAS="${MATHLIB_CACHE_SAS_RAW%"${MATHLIB_CACHE_SAS_RAW##*[![:space:]]}"}"
 
           echo "Uploading cache to Azure..."
-          MATHLIB_CACHE_USE_CLOUDFLARE=0 lake env "$CACHE_BIN" --staging-dir="cache-staging" --repo=${{ github.event.pull_request.head.repo.full_name || github.repository }} put-staged
+          MATHLIB_CACHE_USE_CLOUDFLARE=0 lake env "$CACHE_BIN" put-staged --staging-dir="cache-staging" --repo=${{ github.event.pull_request.head.repo.full_name || github.repository }}
         env:
           MATHLIB_CACHE_SAS_RAW: ${{ secrets.MATHLIB_CACHE_SAS }}
 

@@ -1,0 +1,27 @@
+name: CI Dev Simple
+
+on:
+  push:
+    branches:
+      - "ci-dev/marcelo/2026/01/ephemerals"
+
+jobs:
+  job1:
+    runs-on: ml-ephemeral
+    steps:
+      - name: Job 1
+        run: echo "job1 on runner ${RUNNER_NAME}"
+
+  job2:
+    runs-on: ml-ephemeral
+    needs: job1
+    steps:
+      - name: Job 2
+        run: echo "job2 on runner ${RUNNER_NAME}"
+
+  job3:
+    runs-on: ml-ephemeral
+    needs: job2
+    steps:
+      - name: Job 3
+        run: echo "job3 on runner ${RUNNER_NAME}"

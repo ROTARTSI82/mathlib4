@@ -10,7 +10,7 @@ env:
 
 jobs:
   job1:
-    runs-on: ml-ephemeral
+    runs-on: ephemeral
     steps:
       - name: Job 1
         run: echo "job1 on runner ${RUNNER_NAME}"
@@ -47,7 +47,7 @@ jobs:
           lake build
 
   job2:
-    runs-on: ml-ephemeral
+    runs-on: ephemeral
     needs: job1
     steps:
       - name: Job 2

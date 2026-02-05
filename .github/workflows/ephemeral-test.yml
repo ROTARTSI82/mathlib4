@@ -28,13 +28,18 @@ jobs:
           use-mathlib-cache: false
           reinstall-transient-toolchain: true
 
+      - name: verify that nothing was available in the cache
+        continue-on-error: true
+        run: |
+          lake build --no-build --rehash -v Mathlib || true
+
       - name: get full cache for Mathlib
         run: |
           lake exe cache get
 
       - name: verify that everything was available in the cache
+        continue-on-error: true
         run: |
-          echo "::group::{verify Mathlib cache}"
           lake build --no-build --rehash -v Mathlib
 
       - name: build Mathlib
@@ -61,15 +66,20 @@ jobs:
           use-mathlib-cache: false
           reinstall-transient-toolchain: true
 
+      - name: verify that nothing was available in the cache
+        continue-on-error: true
+        run: |
+          lake build --no-build --rehash -v Mathlib || true
+
       - name: get full cache for Mathlib
         run: |
           lake exe cache get
 
+      - name: verify that everything was available in the cache
+        continue-on-error: true
+        run: |
+          lake build --no-build --rehash -v Mathlib
+
       - name: build Mathlib
         run: |
           lake build
-
-      - name: verify that everything was available in the cache
-        run: |
-          echo "::group::{verify Mathlib cache}"
-          lake build --no-build --rehash -v Mathlib

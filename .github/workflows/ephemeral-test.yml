@@ -5,10 +5,30 @@ on:
     branches:
       - "ci-dev/marcelo/2026/01/ephemerals"
 
+env:
+  LAKE_NO_CACHE: true
+
 jobs:
   job1:
     runs-on: ml-ephemeral
     steps:
+      - name: Checkout master branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: master
+
+      - name: Configure Lean
+        uses: leanprover/lean-action@c544e89643240c6b398f14a431bcdc6309e36b3e # v1.4.0
+        with:
+          auto-config: false
+          use-github-cache: false
+          use-mathlib-cache: false
+          reinstall-transient-toolchain: true
+
+      - name: get full cache for Mathlib
+        run: |
+          lake exe cache get
+
       - name: Job 1
         run: echo "job1 on runner ${RUNNER_NAME}"
 
@@ -16,6 +36,23 @@ jobs:
     runs-on: ml-ephemeral
     needs: job1
     steps:
+      - name: Checkout master branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: master
+
+      - name: Configure Lean
+        uses: leanprover/lean-action@c544e89643240c6b398f14a431bcdc6309e36b3e # v1.4.0
+        with:
+          auto-config: false
+          use-github-cache: false
+          use-mathlib-cache: false
+          reinstall-transient-toolchain: true
+
+      - name: get full cache for Mathlib
+        run: |
+          lake exe cache get
+
       - name: Job 2
         run: echo "job2 on runner ${RUNNER_NAME}"
 

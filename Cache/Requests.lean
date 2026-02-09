@@ -561,7 +561,7 @@ end Put
 section Stage
 def copyCmd : String := if System.Platform.isWindows then "COPY" else "cp"
 
-/-- Moves cached files to a directory, intended for 'staging' -/
+/-- Copies cached files to a directory, intended for 'staging' -/
 def stageFiles
   (destinationPath : String) (fileNames : Array String)
   : IO Unit := do
@@ -570,7 +570,7 @@ def stageFiles
     IO.FS.createDirAll destinationPath
     let paths := fileNames.map (fun (f : String) => s!"{(IO.CACHEDIR / f)}")
     let args := paths ++ #[destinationPath]
-    IO.println s!"Moving to {size} file(s) to {destinationPath}"
+    IO.println s!"Copying {size} file(s) to {destinationPath}"
     discard <| IO.runCmd copyCmd args
   else IO.println "No files to stage"
 

@@ -424,7 +424,7 @@ jobs:
         if: ${{ steps.build.outcome == 'success' }}
         shell: bash
         run: |
-          if find cache-staging -type f -name '*.ltar' -print -quit | grep -q .; then
+          if find cache-staging -type f -name '*.ltar' -print -quit | grep -q .;
             echo "has_files=true" >> "$GITHUB_OUTPUT"
           else
             echo "has_files=false" >> "$GITHUB_OUTPUT"
@@ -436,17 +436,6 @@ jobs:
         with:
           name: cache-staging
           path: cache-staging/
-
-      # - name: upload artifact containing contents of pr-branch
-      #   # TODO: We should probably only upload the artifacts needed by the cache
-      #   uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-      #   with:
-      #     name: mathlib4_artifact
-      #     include-hidden-files: true
-      #     # we exclude .git since there may be secrets in there
-      #     path: |
-      #       pr-branch/
-      #       !pr-branch/.git/
 
       - name: Check if building Archive or Counterexamples failed
         if: steps.archive.outcome == 'failure' || steps.counterexamples.outcome == 'failure'
@@ -639,7 +628,7 @@ jobs:
           echo "CACHE_BIN=$CACHE_BIN" >> "$GITHUB_ENV"
 
       - name: Download cache staging artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: cache-staging
           path: cache-staging

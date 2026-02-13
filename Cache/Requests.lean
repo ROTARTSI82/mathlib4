@@ -564,20 +564,19 @@ def copyCmd : String := if System.Platform.isWindows then "COPY" else "cp"
 
 /-- Copies cached files to a directory, intended for 'staging' -/
 def stageFiles
-  (destinationPath : String) (fileNames : Array String)
-  : IO Unit := do
+    (destinationPath : FilePath) (fileNames : Array String) : IO Unit := do
   let size := fileNames.size
   if size > 0 then
     IO.FS.createDirAll destinationPath
-    let paths := fileNames.map (fun (f : String) => s!"{(IO.CACHEDIR / f)}")
-    let args := paths ++ #[destinationPath]
+    let paths := fileNames.map (s!"{IO.CACHEDIR / ↑·}")
+    let args := paths.push destinationPath.toString
     IO.println s!"Copying {size} file(s) to {destinationPath}"
     discard <| IO.runCmd copyCmd args
   else IO.println "No files to stage"
 
 /-- Copies staged files into the local cache directory. -/
 def unstageFiles (stagingDir : FilePath) (overwrite : Bool) : IO Unit := do
-  if !(← stagingDir.isDir) then
+  unless (← stagingDir.isDir) do
     IO.println "--staging-dir must be a directory"
     return
   let files ← IO.getFilesWithExtension stagingDir "ltar"
@@ -598,6 +597,7 @@ def unstageFiles (stagingDir : FilePath) (overwrite : Bool) : IO Unit := do
     discard <| IO.runCmd copyCmd args
   else
     IO.println "No files to unstage"
+
 end Stage
 
 section Commit

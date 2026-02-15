@@ -11,7 +11,6 @@ import Batteries.Tactic.OpenPrivate
 variable {α : Type}
 
 open Lean
-open private Lake.Glob.ofString? from Lake.Load.Toml
 namespace Cache.IO
 
 open System (FilePath)
@@ -452,6 +451,8 @@ def lookup (hashMap : ModuleHashMap) (modules : List Name) : IO Unit := do
     for line in (← runCmd (← getLeanTar) #["-k", ltar.toString]).splitOn "\n" |>.dropLast do
       println! "  comment: {line}"
   if err then IO.Process.exit 1
+
+open private Lake.Glob.ofString? from Lake.Load.Toml in
 
 /--
 Parse a string as either a path or a Lean module name.

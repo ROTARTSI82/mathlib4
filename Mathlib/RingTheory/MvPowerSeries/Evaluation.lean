@@ -3,15 +3,16 @@ Copyright (c) 2024 Antoine Chambert-Loir, María Inés de Frutos Fernández. All
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Antoine Chambert-Loir, María Inés de Frutos-Fernández
 -/
+module
 
-import Mathlib.Algebra.MvPolynomial.CommRing
-import Mathlib.RingTheory.Ideal.BigOperators
-import Mathlib.RingTheory.MvPowerSeries.PiTopology
-import Mathlib.RingTheory.MvPowerSeries.Trunc
-import Mathlib.Topology.Algebra.Algebra
-import Mathlib.Topology.Algebra.TopologicallyNilpotent
-import Mathlib.Topology.Algebra.LinearTopology
-import Mathlib.Topology.Algebra.UniformRing
+public import Mathlib.Algebra.MvPolynomial.CommRing
+public import Mathlib.RingTheory.Ideal.BigOperators
+public import Mathlib.RingTheory.MvPowerSeries.PiTopology
+public import Mathlib.RingTheory.MvPowerSeries.Trunc
+public import Mathlib.Topology.Algebra.Algebra
+public import Mathlib.Topology.Algebra.TopologicallyNilpotent
+public import Mathlib.Topology.Algebra.LinearTopology
+public import Mathlib.Topology.Algebra.UniformRing
 
 /-! # Evaluation of multivariate power series
 
@@ -41,6 +42,8 @@ Under `Continuous φ` and `HasEval a`, the following lemmas furnish the properti
 
 -/
 
+@[expose] public section
+
 namespace MvPowerSeries
 
 open Topology
@@ -60,6 +63,7 @@ variable {φ : R →+* S}
 open WithPiTopology
 
 /-- Families at which power series can be consistently evaluated -/
+@[mk_iff hasEval_def]
 structure HasEval (a : σ → S) : Prop where
   hpow : ∀ s, IsTopologicallyNilpotent (a s)
   tendsto_zero : Tendsto a cofinite (𝓝 0)
@@ -94,31 +98,28 @@ theorem HasEval.map (hφ : Continuous φ) {a : σ → R} (ha : HasEval a) :
   hpow s := (ha.hpow s).map hφ
   tendsto_zero := (map_zero φ ▸ hφ.tendsto 0).comp ha.tendsto_zero
 
-protected theorem HasEval.X:
+protected theorem HasEval.X :
     HasEval (fun s ↦ (MvPowerSeries.X s : MvPowerSeries σ R)) where
-  hpow s := tendsto_pow_zero_of_constantCoeff_zero (constantCoeff_X s)
+  hpow s := isTopologicallyNilpotent_of_constantCoeff_zero (constantCoeff_X s)
   tendsto_zero := variables_tendsto_zero
+
+variable [IsTopologicalRing S] [IsLinearTopology S S]
 
 /-- The domain of evaluation of `MvPowerSeries`, as an ideal -/
 @[simps]
-def hasEvalIdeal [IsTopologicalRing S] [IsLinearTopology S S] : Ideal (σ → S) where
+def hasEvalIdeal : Ideal (σ → S) where
   carrier := {a | HasEval a}
   add_mem' := HasEval.add
   zero_mem' := HasEval.zero
   smul_mem' := HasEval.mul_left
 
-theorem mem_hasEvalIdeal_iff [IsTopologicalRing S] [IsLinearTopology S S] {a : σ → S} :
+theorem mem_hasEvalIdeal_iff {a : σ → S} :
     a ∈ hasEvalIdeal ↔ HasEval a := by
   simp [hasEvalIdeal]
 
-/-- The inclusion of polynomials into power series has dense image -/
-theorem _root_.MvPolynomial.toMvPowerSeries_denseRange :
-    DenseRange (toMvPowerSeries (R := R) (σ := σ)) := fun f => by
-  have : Tendsto (fun d ↦ (trunc' R d f : MvPowerSeries σ R)) atTop (𝓝 f) := by
-    rw [tendsto_iff_coeff_tendsto]
-    refine fun d ↦ tendsto_atTop_of_eventually_const fun n (hdn : d ≤ n) ↦ ?_
-    simp [coeff_trunc', hdn]
-  exact mem_closure_of_tendsto this <| .of_forall fun _ ↦ mem_range_self _
+theorem HasEval.pow (x : σ → S) (ha : HasEval x) {p : ℕ} (hp : 0 < p) :
+    HasEval (x ^ p) :=
+  mem_hasEvalIdeal_iff.mp <| Ideal.pow_mem_of_mem hasEvalIdeal ha p hp
 
 end
 
@@ -134,10 +135,12 @@ variable {S : Type*} [CommRing S] [UniformSpace S]
 variable {φ : R →+* S}
 
 -- We endow MvPowerSeries σ R with the product uniform structure
+set_option backward.privateInPublic true in
 private instance : UniformSpace (MvPolynomial σ R) :=
   comap toMvPowerSeries (Pi.uniformSpace _)
 
-/-- The induced uniform structure of MvPolynomial σ R is an add group uniform structure -/
+set_option backward.privateInPublic true in
+/-- The induced uniform structure of MvPolynomial σ R is an additive group uniform structure -/
 private instance [IsUniformAddGroup R] : IsUniformAddGroup (MvPolynomial σ R) :=
   IsUniformAddGroup.comap coeToMvPowerSeries.ringHom
 
@@ -147,7 +150,7 @@ theorem _root_.MvPolynomial.toMvPowerSeries_isUniformInducing :
 
 theorem _root_.MvPolynomial.toMvPowerSeries_isDenseInducing :
     IsDenseInducing (toMvPowerSeries (σ := σ) (R := R)) :=
-  toMvPowerSeries_isUniformInducing.isDenseInducing toMvPowerSeries_denseRange
+  toMvPowerSeries_isUniformInducing.isDenseInducing denseRange_toMvPowerSeries
 
 variable {a : σ → S}
 
@@ -157,6 +160,7 @@ theorem _root_.MvPolynomial.toMvPowerSeries_uniformContinuous
     [IsUniformAddGroup R] [IsUniformAddGroup S] [IsLinearTopology S S]
     (hφ : Continuous φ) (ha : HasEval a) :
     UniformContinuous (MvPolynomial.eval₂Hom φ a) := by
+  classical
   apply uniformContinuous_of_continuousAt_zero
   rw [ContinuousAt, map_zero, IsLinearTopology.hasBasis_ideal.tendsto_right_iff]
   intro I hI
@@ -173,7 +177,7 @@ theorem _root_.MvPolynomial.toMvPowerSeries_uniformContinuous
   let D := Iic n₀
   have hD : Set.Finite D := finite_Iic _
   have : ∀ d ∈ D, ∀ᶠ (p : MvPolynomial σ R) in 𝓝 0, φ (p.coeff d) ∈ I := fun d hd ↦ by
-    have : Tendsto (φ ∘ coeff R d ∘ toMvPowerSeries) (𝓝 0) (𝓝 0) :=
+    have : Tendsto (φ ∘ coeff d ∘ toMvPowerSeries) (𝓝 0) (𝓝 0) :=
       hφ.comp (continuous_coeff R d) |>.comp continuous_induced_dom |>.tendsto' 0 0 (map_zero _)
     filter_upwards [this.eventually_mem hI] with f hf
     simpa using hf
@@ -209,7 +213,7 @@ theorem eval₂_coe (f : MvPolynomial σ R) :
   rw [← MvPolynomial.coe_inj, this.choose_spec]
 
 @[simp]
-theorem eval₂_C (r : R) : eval₂ φ a (C σ R r) = φ r := by
+theorem eval₂_C (r : R) : eval₂ φ a (C r) = φ r := by
   rw [← coe_C, eval₂_coe, MvPolynomial.eval₂_C]
 
 @[simp]
@@ -227,7 +231,7 @@ noncomputable def eval₂Hom (hφ : Continuous φ) (ha : HasEval a) :
     MvPowerSeries σ R →+* S :=
   IsDenseInducing.extendRingHom (i := coeToMvPowerSeries.ringHom)
     toMvPowerSeries_isUniformInducing
-    toMvPowerSeries_denseRange
+    denseRange_toMvPowerSeries
     (toMvPowerSeries_uniformContinuous hφ ha)
 
 theorem eval₂Hom_eq_extend (hφ : Continuous φ) (ha : HasEval a) (f : MvPowerSeries σ R) :
@@ -254,7 +258,7 @@ theorem uniformContinuous_eval₂ (hφ : Continuous φ) (ha : HasEval a) :
   rw [← coe_eval₂Hom hφ ha]
   exact uniformContinuous_uniformly_extend
     toMvPowerSeries_isUniformInducing
-    toMvPowerSeries_denseRange
+    denseRange_toMvPowerSeries
     (toMvPowerSeries_uniformContinuous hφ ha)
 
 theorem continuous_eval₂ (hφ : Continuous φ) (ha : HasEval a) :
@@ -263,17 +267,17 @@ theorem continuous_eval₂ (hφ : Continuous φ) (ha : HasEval a) :
 
 theorem hasSum_eval₂ (hφ : Continuous φ) (ha : HasEval a) (f : MvPowerSeries σ R) :
     HasSum
-    (fun (d : σ →₀ ℕ) ↦ φ (coeff R d f) * (d.prod fun s e => (a s) ^ e))
+    (fun (d : σ →₀ ℕ) ↦ φ (coeff d f) * (d.prod fun s e => (a s) ^ e))
     (MvPowerSeries.eval₂ φ a f) := by
   rw [← coe_eval₂Hom hφ ha, eval₂Hom_eq_extend hφ ha]
   convert (hasSum_of_monomials_self f).map (eval₂Hom hφ ha) (?_) with d
   · simp only [Function.comp_apply, coe_eval₂Hom, ← MvPolynomial.coe_monomial,
-    eval₂_coe, eval₂_monomial]
+      eval₂_coe, eval₂_monomial]
   · rw [coe_eval₂Hom]; exact continuous_eval₂ hφ ha
 
 theorem eval₂_eq_tsum (hφ : Continuous φ) (ha : HasEval a) (f : MvPowerSeries σ R) :
     MvPowerSeries.eval₂ φ a f =
-      ∑' (d : σ →₀ ℕ), φ (coeff R d f) * (d.prod fun s e => (a s) ^ e) :=
+      ∑' (d : σ →₀ ℕ), φ (coeff d f) * (d.prod fun s e => (a s) ^ e) :=
   (hasSum_eval₂ hφ ha f).tsum_eq.symm
 
 theorem eval₂_unique (hφ : Continuous φ) (ha : HasEval a)
@@ -301,7 +305,7 @@ variable [Algebra R S] [ContinuousSMul R S]
 /-- Evaluation of power series at adequate elements, as an `AlgHom` -/
 noncomputable def aeval (ha : HasEval a) : MvPowerSeries σ R →ₐ[R] S where
   toRingHom := MvPowerSeries.eval₂Hom (continuous_algebraMap R S) ha
-  commutes' := fun r ↦ by
+  commutes' r := by
     simp only [toMonoidHom_eq_coe, OneHom.toFun_eq_coe, MonoidHom.toOneHom_coe, MonoidHom.coe_coe]
     rw [← c_eq_algebraMap, coe_eval₂Hom, eval₂_C]
 
@@ -325,19 +329,20 @@ theorem aeval_unique {ε : MvPowerSeries σ R →ₐ[R] S} (hε : Continuous ε)
   rw [coe_aeval]
   refine (eval₂_unique (continuous_algebraMap R S) (HasEval.X.map hε) hε ?_).symm
   intro p
-  change ε.comp (coeToMvPowerSeries.algHom R) p = _
+  trans ε.comp (coeToMvPowerSeries.algHom R) p
+  · simp
   conv_lhs => rw [← p.aeval_X_left_apply, MvPolynomial.comp_aeval_apply, MvPolynomial.aeval_def]
-  simp [MvPolynomial.comp_aeval_apply, MvPolynomial.aeval_def]
+  simp
 
 theorem hasSum_aeval (ha : HasEval a) (f : MvPowerSeries σ R) :
-    HasSum (fun (d : σ →₀ ℕ) ↦ (coeff R d f) • (d.prod fun s e => (a s) ^ e))
+    HasSum (fun (d : σ →₀ ℕ) ↦ (coeff d f) • (d.prod fun s e => (a s) ^ e))
       (MvPowerSeries.aeval ha f) := by
   simp_rw [coe_aeval, ← algebraMap_smul (R := R) S, smul_eq_mul]
   exact hasSum_eval₂ (continuous_algebraMap R S) ha f
 
 theorem aeval_eq_sum (ha : HasEval a) (f : MvPowerSeries σ R) :
     MvPowerSeries.aeval ha f =
-      tsum (fun (d : σ →₀ ℕ) ↦ (coeff R d f) • (d.prod fun s e => (a s) ^ e)) :=
+      tsum (fun (d : σ →₀ ℕ) ↦ (coeff d f) • (d.prod fun s e => (a s) ^ e)) :=
   (hasSum_aeval ha f).tsum_eq.symm
 
 theorem comp_aeval (ha : HasEval a)
@@ -345,13 +350,13 @@ theorem comp_aeval (ha : HasEval a)
     [IsTopologicalRing T] [IsLinearTopology T T]
     [T2Space T] [Algebra R T] [ContinuousSMul R T] [CompleteSpace T]
     {ε : S →ₐ[R] T} (hε : Continuous ε) :
-    ε.comp (aeval ha) = aeval (ha.map hε)  := by
+    ε.comp (aeval ha) = aeval (ha.map hε) := by
   apply DFunLike.ext'
   simp only [AlgHom.coe_comp, coe_aeval ha]
   rw [← RingHom.coe_coe,
     comp_eval₂ (continuous_algebraMap R S) ha (show Continuous (ε : S →+* T) from hε), coe_aeval]
   congr!
-  simp only [AlgHom.toRingHom_eq_coe, AlgHom.comp_algebraMap_of_tower, RingHom.coe_coe]
+  simp only [AlgHom.comp_algebraMap_of_tower]
 
 end Evaluation
 

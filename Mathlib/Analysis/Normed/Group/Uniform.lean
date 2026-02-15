@@ -3,10 +3,12 @@ Copyright (c) 2018 Patrick Massot. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Patrick Massot, Johannes Hölzl, Yaël Dillies
 -/
-import Mathlib.Analysis.Normed.Group.Continuity
-import Mathlib.Topology.Algebra.IsUniformGroup.Basic
-import Mathlib.Topology.MetricSpace.Algebra
-import Mathlib.Topology.MetricSpace.IsometricSMul
+module
+
+public import Mathlib.Analysis.Normed.Group.Continuity
+public import Mathlib.Topology.Algebra.IsUniformGroup.Basic
+public import Mathlib.Topology.MetricSpace.Algebra
+public import Mathlib.Topology.MetricSpace.IsometricSMul
 
 /-!
 # Normed groups are uniform groups
@@ -14,6 +16,8 @@ import Mathlib.Topology.MetricSpace.IsometricSMul
 This file proves lipschitzness of normed group operations and shows that normed groups are uniform
 groups.
 -/
+
+@[expose] public section
 
 variable {𝓕 E F : Type*}
 
@@ -30,6 +34,16 @@ instance NormedGroup.to_isIsometricSMul_right : IsIsometricSMul Eᵐᵒᵖ E :=
 @[to_additive]
 theorem Isometry.norm_map_of_map_one {f : E → F} (hi : Isometry f) (h₁ : f 1 = 1) (x : E) :
     ‖f x‖ = ‖x‖ := by rw [← dist_one_right, ← h₁, hi.dist_eq, dist_one_right]
+
+@[to_additive (attr := simp) norm_map]
+theorem norm_map' [FunLike 𝓕 E F] [IsometryClass 𝓕 E F] [OneHomClass 𝓕 E F] (f : 𝓕) (x : E) :
+    ‖f x‖ = ‖x‖ :=
+  (IsometryClass.isometry f).norm_map_of_map_one (map_one f) x
+
+@[to_additive (attr := simp) nnnorm_map]
+theorem nnnorm_map' [FunLike 𝓕 E F] [IsometryClass 𝓕 E F] [OneHomClass 𝓕 E F] (f : 𝓕) (x : E) :
+    ‖f x‖₊ = ‖x‖₊ :=
+  NNReal.eq <| norm_map' f x
 
 @[to_additive (attr := simp)]
 theorem dist_mul_self_right (a b : E) : dist b (a * b) = ‖a‖ := by
@@ -53,10 +67,10 @@ variable [FunLike 𝓕 E F]
 
 /-- A homomorphism `f` of seminormed groups is Lipschitz, if there exists a constant `C` such that
 for all `x`, one has `‖f x‖ ≤ C * ‖x‖`. The analogous condition for a linear map of
-(semi)normed spaces is in `Mathlib/Analysis/NormedSpace/OperatorNorm.lean`. -/
-@[to_additive "A homomorphism `f` of seminormed groups is Lipschitz, if there exists a constant
+(semi)normed spaces is in `Mathlib/Analysis/Normed/Operator/Basic.lean`. -/
+@[to_additive /-- A homomorphism `f` of seminormed groups is Lipschitz, if there exists a constant
 `C` such that for all `x`, one has `‖f x‖ ≤ C * ‖x‖`. The analogous condition for a linear map of
-(semi)normed spaces is in `Mathlib/Analysis/NormedSpace/OperatorNorm.lean`."]
+(semi)normed spaces is in `Mathlib/Analysis/Normed/Operator/Basic.lean`. -/]
 theorem MonoidHomClass.lipschitz_of_bound [MonoidHomClass 𝓕 E F] (f : 𝓕) (C : ℝ)
     (h : ∀ x, ‖f x‖ ≤ C * ‖x‖) : LipschitzWith (Real.toNNReal C) f :=
   LipschitzWith.of_dist_le' fun x y => by simpa only [dist_eq_norm_div, map_div] using h (x / y)
@@ -91,8 +105,8 @@ theorem LipschitzWith.norm_div_le_of_le {f : E → F} {C : ℝ≥0} (h : Lipschi
 
 /-- A homomorphism `f` of seminormed groups is continuous, if there exists a constant `C` such that
 for all `x`, one has `‖f x‖ ≤ C * ‖x‖`. -/
-@[to_additive "A homomorphism `f` of seminormed groups is continuous, if there exists a constant `C`
-such that for all `x`, one has `‖f x‖ ≤ C * ‖x‖`"]
+@[to_additive /-- A homomorphism `f` of seminormed groups is continuous, if there exists a constant
+`C` such that for all `x`, one has `‖f x‖ ≤ C * ‖x‖`. -/]
 theorem MonoidHomClass.continuous_of_bound [MonoidHomClass 𝓕 E F] (f : 𝓕) (C : ℝ)
     (h : ∀ x, ‖f x‖ ≤ C * ‖x‖) : Continuous f :=
   (MonoidHomClass.lipschitz_of_bound f C h).continuous
@@ -139,6 +153,15 @@ theorem LipschitzWith.nnorm_le_mul' {f : E → F} {K : ℝ≥0} (h : LipschitzWi
 theorem AntilipschitzWith.le_mul_norm' {f : E → F} {K : ℝ≥0} (h : AntilipschitzWith K f)
     (hf : f 1 = 1) (x) : ‖x‖ ≤ K * ‖f x‖ := by
   simpa only [dist_one_right, hf] using h.le_mul_dist x 1
+
+@[to_additive antilipschitzWith_iff_exists_mul_le_norm]
+theorem antilipschitzWith_iff_exists_mul_le_norm' [MonoidHomClass 𝓕 E F] {f : 𝓕} :
+    (∃ K, AntilipschitzWith K f) ↔ ∃ c > 0, ∀ x, c * ‖x‖ ≤ ‖f x‖ := by
+  refine ⟨fun ⟨K, hK⟩ ↦ ⟨(K + 1)⁻¹, by positivity, fun x ↦ ?_⟩, fun ⟨c, hc0, hc⟩ ↦
+    ⟨⟨c⁻¹, by positivity⟩, MonoidHomClass.antilipschitz_of_bound f fun x ↦ ?_⟩⟩
+  · grw [hK.le_mul_norm' (map_one f), ← mul_assoc]
+    exact mul_le_of_le_one_left (norm_nonneg' (f x)) (by simp [field])
+  · grw [← hc, NNReal.coe_mk, inv_mul_cancel_left₀ hc0.ne']
 
 @[to_additive AntilipschitzWith.le_mul_nnnorm]
 theorem AntilipschitzWith.le_mul_nnnorm' {f : E → F} {K : ℝ≥0} (h : AntilipschitzWith K f)
@@ -349,8 +372,8 @@ instance (priority := 100) SeminormedCommGroup.to_lipschitzMul : LipschitzMul E 
 -- See note [lower instance priority]
 /-- A seminormed group is a uniform group, i.e., multiplication and division are uniformly
 continuous. -/
-@[to_additive "A seminormed group is a uniform additive group, i.e., addition and subtraction are
-uniformly continuous."]
+@[to_additive /-- A seminormed group is a uniform additive group, i.e., addition and subtraction are
+uniformly continuous. -/]
 instance (priority := 100) SeminormedCommGroup.to_isUniformGroup : IsUniformGroup E :=
   ⟨(LipschitzWith.prod_fst.div LipschitzWith.prod_snd).uniformContinuous⟩
 
@@ -397,7 +420,7 @@ theorem cauchySeq_prod_of_eventually_eq {u v : ℕ → E} {N : ℕ} (huv : ∀ n
   suffices ∀ n ≥ N, d n = d N from (tendsto_atTop_of_eventually_const this).cauchySeq.mul hv
   intro n hn
   dsimp [d]
-  rw [eventually_constant_prod _ (add_le_add_right hn 1)]
+  rw [eventually_constant_prod (N := N + 1) _ (by gcongr)]
   intro m hm
   simp [huv m (le_of_lt hm)]
 

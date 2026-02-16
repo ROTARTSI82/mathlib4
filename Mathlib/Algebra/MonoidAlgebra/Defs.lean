@@ -317,7 +317,7 @@ instance distribSMul [DistribSMul N R] : DistribSMul N R[M] :=
 instance isScalarTower [SMulZeroClass N R] [SMulZeroClass O R] [SMul N O] [IsScalarTower N O R] :
     IsScalarTower N O R[M] := coeffEquiv.isScalarTower ..
 
-@[to_additive (dont_translate := N) (relevant_arg := M) smulCommClass]
+@[to_additive (dont_translate := N) smulCommClass]
 instance smulCommClass [SMulZeroClass N R] [SMulZeroClass O R] [SMulCommClass N O R] :
     SMulCommClass N O R[M] := coeffEquiv.smulCommClass ..
 

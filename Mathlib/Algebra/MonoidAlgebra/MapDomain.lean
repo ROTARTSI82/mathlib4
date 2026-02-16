@@ -68,7 +68,7 @@ Given a map `f : R → S`, return the corresponding map `R[M] → S[M]` obtained
 each coefficient along `f`. -/]
 def mapRange (f : R →+ S) (x : R[M]) : S[M] := .ofCoeff <| .mapRange f f.map_zero x.coeff
 
-@[to_additive (relevant_arg := M) (attr := simp)]
+@[to_additive (attr := simp)]
 lemma mapRange_zero (f : R →+ S) : mapRange f (0 : R[M]) = 0 := by ext; simp
 
 @[to_additive]
@@ -79,7 +79,7 @@ lemma mapRange_add (f : R →+ S) (x y : R[M]) :
 lemma mapRange_sum (f : R →+ S) (s : Finset ι) (x : ι → R[M]) :
     mapRange f (∑ i ∈ s, x i) = ∑ i ∈ s, mapRange f (x i) := by ext; simp
 
-@[to_additive (relevant_arg := M) (attr := simp)]
+@[to_additive (attr := simp)]
 lemma mapRange_single (f : R →+ S) (r : R) (m : M) : mapRange f (single m r) = single m (f r) := by
   simp [mapRange]
 

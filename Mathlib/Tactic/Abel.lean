@@ -106,6 +106,9 @@ some information about the current type we are working over, so that we can cons
 use group lemmas or monoid lemmas as appropriate. -/
 abbrev M := ReaderT Context AtomM
 
+/-- Just a string -/
+def Hello : String := "Hello, abel!"
+
 /-- Apply the function `n : ∀ {α} [inst : AddWhatever α], _` to the
 implicit parameters in the context, and the given list of arguments. -/
 def Context.app (c : Context) (n : Name) (inst : Expr) : Array Expr → Expr :=

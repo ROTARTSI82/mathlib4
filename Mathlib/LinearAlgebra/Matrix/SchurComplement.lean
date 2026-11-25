@@ -420,9 +420,7 @@ theorem det_one_add_replicateCol_mul_replicateRow {ι : Type*} [Unique ι] (u v 
 
 /-- The **Matrix determinant lemma**
 
-TODO: show the more general version without `hA : IsUnit A.det` as
-`(A + replicateCol u * replicateRow v).det = A.det + v ⬝ᵥ (adjugate A) *ᵥ u`.
--/
+See `Matrix.det_add_vecMulVec` for a version without `hA : IsUnit A.det`. -/
 theorem det_add_replicateCol_mul_replicateRow {ι : Type*} [Unique ι]
     {A : Matrix m m α} (hA : IsUnit A.det) (u v : m → α) :
     (A + replicateCol ι u * replicateRow ι v).det =
@@ -430,6 +428,40 @@ theorem det_add_replicateCol_mul_replicateRow {ι : Type*} [Unique ι]
   nth_rewrite 1 [← Matrix.mul_one A]
   rwa [← Matrix.mul_nonsing_inv_cancel_left A (replicateCol ι u * replicateRow ι v),
     ← Matrix.mul_add, det_mul, ← Matrix.mul_assoc, det_one_add_mul_comm, ← Matrix.mul_assoc]
+
+/-- The **Matrix determinant lemma** over a commutative ring:
+`det (A + u vᵀ) = det A + vᵀ adj(A) u`. Unlike `Matrix.det_add_replicateCol_mul_replicateRow`,
+this does not assume that `A` is invertible. -/
+theorem det_add_vecMulVec (A : Matrix m m α) (u v : m → α) :
+    (A + vecMulVec u v).det = A.det + v ⬝ᵥ A.adjugate *ᵥ u := by
+  -- Add `v j • u` to the columns `j ∈ S` one at a time.
+  let B (S : Finset m) : Matrix m m α := of fun i j ↦ A i j + if j ∈ S then u i * v j else 0
+  suffices h : ∀ S, (B S).det = A.det + ∑ j ∈ S, v j * (A.updateCol j u).det by
+    have hB : A + vecMulVec u v = B Finset.univ := by ext; simp [B, vecMulVec_apply]
+    rw [hB, h, ← cramer_eq_adjugate_mulVec, dotProduct]
+    simp [cramer_apply]
+  intro S
+  induction S using Finset.induction_on with
+  | empty =>
+    have : B ∅ = A := by ext; simp [B]
+    simp [this]
+  | insert k S hk ih =>
+    have hBk : B (insert k S) = (B S).updateCol k ((fun i ↦ B S i k) + v k • u) := by
+      ext i j
+      by_cases hj : j = k
+      · subst hj; simp [B, hk, mul_comm]
+      · simp [B, hj]
+    -- Subtracting `v j •` column `k` from each column `j ∈ S` turns `B S` back into `A`.
+    have hu : ((B S).updateCol k u).det = (A.updateCol k u).det := by
+      rw [← det_transpose, ← det_transpose (A.updateCol k u)]
+      refine det_eq_of_forall_row_eq_smul_add_const (fun j ↦ if j ∈ S then v j else 0) k
+        (by simp [hk]) fun j i ↦ ?_
+      by_cases hj : j = k
+      · subst hj; simp [hk]
+      · by_cases hjS : j ∈ S <;> simp [B, hj, hjS, mul_comm]
+    rw [hBk, det_updateCol_add, updateCol_eq_self, det_updateCol_smul, ih, hu,
+      Finset.sum_insert hk]
+    ring
 
 /-- A generalization of the **Matrix determinant lemma** -/
 theorem det_add_mul {A : Matrix m m α} (U : Matrix m n α)

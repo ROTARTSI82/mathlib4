@@ -6,6 +6,7 @@ Authors: Eric Wieser, Yi Yuan
 module
 
 public import Mathlib.Data.Finite.Perm
+public import Mathlib.Data.Fintype.Sort
 public import Mathlib.GroupTheory.Perm.Cycle.Type
 public import Mathlib.GroupTheory.Perm.Option
 public import Mathlib.Logic.Equiv.Fin.Rotate
@@ -506,6 +507,22 @@ theorem Equiv.Perm.sign_eq_prod_prod_Iio (σ : Equiv.Perm (Fin n)) :
   refine σ.swap_induction_on (by simp) fun π i j hne h_eq ↦ ?_
   rw [Equiv.Perm.signAux_mul, Equiv.Perm.sign_mul, h_eq, Equiv.Perm.sign_swap hne,
     Equiv.Perm.signAux_swap hne]
+
+/-- The sign of a permutation of a finite linear order, as a product over the pairs `a < b`.
+See `Equiv.Perm.sign_eq_prod_prod_Iio` for `Fin n`. -/
+theorem Equiv.Perm.sign_eq_prod_prod_lt {α : Type*} [Fintype α] [LinearOrder α] [DecidableEq α]
+    (σ : Equiv.Perm α) :
+    σ.sign = ∏ b, ∏ a with a < b, if σ a < σ b then 1 else -1 := by
+  let e := monoEquivOfFin α rfl
+  rw [← Equiv.Perm.sign_symm_trans_trans σ e.symm.toEquiv, Equiv.Perm.sign_eq_prod_prod_Iio,
+    ← e.toEquiv.prod_comp]
+  refine Finset.prod_congr rfl fun j _ ↦ ?_
+  have h : Finset.univ.filter (· < e.toEquiv j) = (Finset.Iio j).map e.toEquiv.toEmbedding := by
+    ext a
+    simp [Finset.mem_map_equiv, OrderIso.symm_apply_lt]
+  rw [h, Finset.prod_map]
+  refine Finset.prod_congr rfl fun i _ ↦ ?_
+  simp
 
 theorem Equiv.Perm.sign_eq_prod_prod_Ioi (σ : Equiv.Perm (Fin n)) :
     σ.sign = ∏ i, ∏ j ∈ Finset.Ioi i, (if σ i < σ j then 1 else -1) := by

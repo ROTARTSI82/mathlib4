@@ -499,6 +499,32 @@ theorem eRank_diagonal [DecidableEq m] (w : m → R) :
     (diagonal w).eRank = {i | (w i) ≠ 0}.encard := by
   simp [← toENat_cRank, cRank_diagonal, encard_ofPred]
 
+@[simp]
+theorem rank_eq_zero_iff [Finite n] {A : Matrix m n R} : A.rank = 0 ↔ A = 0 := by
+  have := FiniteDimensional.span_of_finite R (Set.finite_range A.col)
+  rw [← finrank_span_range_col, Submodule.finrank_eq_zero, Submodule.span_eq_bot]
+  refine ⟨fun h ↦ ext fun i j ↦ congrFun (h _ ⟨j, rfl⟩) i, ?_⟩
+  rintro rfl _ ⟨j, rfl⟩
+  rfl
+
+theorem rank_pos_iff [Finite n] {A : Matrix m n R} : 0 < A.rank ↔ A ≠ 0 := by
+  rw [Nat.pos_iff_ne_zero, Ne, rank_eq_zero_iff]
+
+/-- A matrix over a field has rank at most one iff it is an outer product `u vᵀ`. -/
+theorem rank_le_one_iff_exists_eq_vecMulVec [Finite n] {A : Matrix m n R} :
+    A.rank ≤ 1 ↔ ∃ u v, A = vecMulVec u v := by
+  refine ⟨fun h ↦ ?_, fun ⟨u, v, h⟩ ↦ h ▸ rank_vecMulVec_le u v⟩
+  have := FiniteDimensional.span_of_finite R (Set.finite_range A.col)
+  rw [← finrank_span_range_col, Submodule.finrank_le_one_iff_isPrincipal,
+    Submodule.isPrincipal_iff] at h
+  obtain ⟨u, hu⟩ := h
+  have : ∀ j, ∃ c : R, c • u = A.col j := fun j ↦
+    Submodule.mem_span_singleton.mp (hu ▸ Submodule.subset_span ⟨j, rfl⟩)
+  choose c hc using this
+  refine ⟨u, c, ?_⟩
+  ext i j
+  rw [vecMulVec_apply, ← col_apply A j i, ← hc j, Pi.smul_apply, smul_eq_mul, mul_comm]
+
 end Field
 
 /-! ### Lemmas about transpose and conjugate transpose

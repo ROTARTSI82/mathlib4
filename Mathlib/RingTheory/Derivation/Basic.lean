@@ -149,6 +149,19 @@ theorem leibniz_pow (n : ℕ) : D (a ^ n) = n • a ^ (n - 1) • D a := by
       simp only [pow_succ', leibniz, ihn, smul_comm a n (_ : M), smul_smul a, add_smul, this,
         Nat.add_succ_sub_one, add_zero, one_nsmul]
 
+/-- The **Leibniz rule** for a finite product. -/
+theorem leibniz_prod {ι : Type*} [DecidableEq ι] (s : Finset ι) (f : ι → A) :
+    D (∏ i ∈ s, f i) = ∑ i ∈ s, (∏ j ∈ s.erase i, f j) • D (f i) := by
+  induction s using Finset.induction_on with
+  | empty => simp
+  | insert a s ha ih =>
+    rw [Finset.prod_insert ha, leibniz, ih, Finset.sum_insert ha, Finset.erase_insert ha,
+      Finset.smul_sum, add_comm]
+    congr 1
+    refine Finset.sum_congr rfl fun i hi ↦ ?_
+    rw [Finset.erase_insert_of_ne (ne_of_mem_of_not_mem hi ha).symm,
+      Finset.prod_insert fun h ↦ ha (Finset.mem_of_mem_erase h), mul_smul]
+
 open Polynomial in
 @[simp]
 theorem map_aeval (P : R[X]) (x : A) :

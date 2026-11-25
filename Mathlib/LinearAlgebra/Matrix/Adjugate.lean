@@ -420,6 +420,100 @@ theorem det_eq_sum_mul_adjugate_col (A : Matrix n n α) (j : n) :
     det A = ∑ i : n, A i j * adjugate A j i := by
   simpa only [det_transpose, ← adjugate_transpose] using! det_eq_sum_mul_adjugate_row Aᵀ j
 
+/-- Replacing row `i` by `Pi.single i 1` leaves the principal minor obtained by deleting row and
+column `i`. -/
+theorem det_updateRow_single_self (A : Matrix n n α) (i : n) :
+    (A.updateRow i (Pi.single i 1)).det = (A.submatrix (↑) ((↑) : {k // k ≠ i} → n)).det := by
+  let e := Equiv.sumCompl (· = i)
+  rw [← det_submatrix_equiv_self e]
+  have : (A.updateRow i (Pi.single i 1)).submatrix e e =
+      fromBlocks 1 0 (of fun (a : {k // ¬k = i}) (b : {k // k = i}) ↦ A a b)
+        (A.submatrix (↑) ((↑) : {k // ¬k = i} → n)) := by
+    ext (⟨a, ha⟩ | ⟨a, ha⟩) (⟨b, hb⟩ | ⟨b, hb⟩) <;> subst_vars <;>
+      simp_all [e, updateRow_apply]
+  rw [this, det_fromBlocks_zero₁₂, det_one, one_mul]
+
+/-- Replacing column `j` by `Pi.single j 1` leaves the principal minor obtained by deleting row
+and column `j`. -/
+theorem det_updateCol_single_self (A : Matrix n n α) (j : n) :
+    (A.updateCol j (Pi.single j 1)).det = (A.submatrix (↑) ((↑) : {k // k ≠ j} → n)).det := by
+  rw [← det_transpose, ← updateRow_transpose, det_updateRow_single_self, ← transpose_submatrix,
+    det_transpose]
+
+/-- A diagonal entry of the adjugate is the principal minor obtained by deleting row and
+column `i`. -/
+theorem adjugate_apply_self (A : Matrix n n α) (i : n) :
+    A.adjugate i i = (A.submatrix (↑) ((↑) : {k // k ≠ i} → n)).det := by
+  rw [adjugate_apply, det_updateRow_single_self]
+
+/-- Replacing row `er none` by `Pi.single (ec none) 1` leaves the minor on the rows `er ∘ some`
+and the columns `ec ∘ some`, with the sign of the matching `er.symm.trans ec`. -/
+theorem det_updateRow_single (A : Matrix n n α) (er ec : Option m ≃ n) :
+    (A.updateRow (er none) (Pi.single (ec none) 1)).det =
+      Perm.sign (er.symm.trans ec) * (A.submatrix (er ∘ some) (ec ∘ some)).det := by
+  set M := A.updateRow (er none) (Pi.single (ec none) 1)
+  -- reindexing rows by `er` and columns by `ec` moves the replaced entry to `(none, none)`
+  have hM : (M.submatrix id (er.symm.trans ec)).submatrix er er =
+      (A.submatrix er ec).updateRow none (Pi.single none 1) := by
+    ext (_ | a) b <;> simp [M, updateRow_apply, Pi.single_apply, ec.injective.eq_iff]
+  let e : m ≃ {k : Option m // k ≠ none} :=
+    ((Equiv.subtypeEquivRight fun _ ↦ Option.ne_none_iff_isSome).trans
+      (Equiv.optionIsSomeEquiv m)).symm
+  have h := det_permute' (er.symm.trans ec) M
+  rw [← det_submatrix_equiv_self er, hM, det_updateRow_single_self,
+    ← det_submatrix_equiv_self e] at h
+  change (A.submatrix (er ∘ some) (ec ∘ some)).det = Perm.sign (er.symm.trans ec) * M.det at h
+  rw [h, ← mul_assoc, ← Int.cast_mul, ← Units.val_mul, Int.units_mul_self, Units.val_one,
+    Int.cast_one, one_mul]
+
+/-- Replacing column `ec none` by `Pi.single (er none) 1` leaves the minor on the rows `er ∘ some`
+and the columns `ec ∘ some`, with the sign of the matching `er.symm.trans ec`. -/
+theorem det_updateCol_single (A : Matrix n n α) (er ec : Option m ≃ n) :
+    (A.updateCol (ec none) (Pi.single (er none) 1)).det =
+      Perm.sign (er.symm.trans ec) * (A.submatrix (er ∘ some) (ec ∘ some)).det := by
+  rw [← det_transpose, ← updateRow_transpose, det_updateRow_single, ← transpose_submatrix,
+    det_transpose, ← sign_symm, Equiv.symm_trans, Equiv.symm_symm]
+
+/-- The entry of the adjugate at `(ec none, er none)` is the minor on the rows `er ∘ some` and
+the columns `ec ∘ some`, with the sign of the matching `er.symm.trans ec`.
+This generalizes `Matrix.adjugate_fin_succ_eq_det_submatrix` to an arbitrary index type. -/
+theorem adjugate_apply_eq_det_submatrix (A : Matrix n n α) (er ec : Option m ≃ n) :
+    A.adjugate (ec none) (er none) =
+      Perm.sign (er.symm.trans ec) * (A.submatrix (er ∘ some) (ec ∘ some)).det := by
+  rw [adjugate_apply, det_updateRow_single]
+
+/-- The entry of the adjugate at `(i, j)` is the minor obtained by deleting row `j` and column `i`,
+where the remaining rows `{k // k ≠ j}` are matched with the remaining columns by
+`Equiv.swap j i`. -/
+theorem adjugate_apply_eq_det_submatrix_swap (A : Matrix n n α) (i j : n) :
+    A.adjugate i j = Perm.sign (swap j i) *
+      (A.submatrix (↑) fun k : {k // k ≠ j} ↦ swap j i k).det := by
+  have h := adjugate_apply_eq_det_submatrix A (optionSubtypeNe j)
+    ((optionSubtypeNe j).trans (swap j i))
+  simp only [optionSubtypeNe_none, trans_apply, swap_apply_left] at h
+  rw [h, ← trans_assoc, symm_trans_self, refl_trans]
+  rfl
+
+/-- **Laplace expansion** of the determinant along row `i`, over an arbitrary index type. The
+minor obtained by deleting row `i` and column `j` has its rows `{k // k ≠ i}` matched with its
+columns by `Equiv.swap i j`. Compare `Matrix.det_succ_row` for `Fin n.succ`. -/
+theorem det_eq_sum_mul_det_submatrix_row (A : Matrix n n α) (i : n) :
+    A.det = ∑ j, Perm.sign (swap i j) * A i j *
+      (A.submatrix (↑) fun k : {k // k ≠ i} ↦ swap i j k).det := by
+  rw [det_eq_sum_mul_adjugate_row A i]
+  refine sum_congr rfl fun j _ ↦ ?_
+  rw [adjugate_apply_eq_det_submatrix_swap]
+  ring
+
+/-- **Laplace expansion** of the determinant along column `j`, over an arbitrary index type. The
+minor obtained by deleting row `i` and column `j` has its columns `{k // k ≠ j}` matched with its
+rows by `Equiv.swap j i`. Compare `Matrix.det_succ_column` for `Fin n.succ`. -/
+theorem det_eq_sum_mul_det_submatrix_col (A : Matrix n n α) (j : n) :
+    A.det = ∑ i, Perm.sign (swap j i) * A i j *
+      (A.submatrix (fun k : {k // k ≠ j} ↦ swap j i k) (↑)).det := by
+  rw [← det_transpose, det_eq_sum_mul_det_submatrix_row _ j]
+  simp_rw [transpose_apply, ← transpose_submatrix, det_transpose]
+
 theorem adjugate_conjTranspose [StarRing α] (A : Matrix n n α) : A.adjugateᴴ = adjugate Aᴴ := by
   dsimp only [conjTranspose]
   have : Aᵀ.adjugate.map star = adjugate (Aᵀ.map star) := (starRingEnd α).map_adjugate Aᵀ

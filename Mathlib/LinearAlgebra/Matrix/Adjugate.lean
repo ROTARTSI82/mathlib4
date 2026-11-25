@@ -420,6 +420,32 @@ theorem det_eq_sum_mul_adjugate_col (A : Matrix n n α) (j : n) :
     det A = ∑ i : n, A i j * adjugate A j i := by
   simpa only [det_transpose, ← adjugate_transpose] using! det_eq_sum_mul_adjugate_row Aᵀ j
 
+/-- Replacing row `i` by `Pi.single i 1` leaves the principal minor obtained by deleting row and
+column `i`. -/
+theorem det_updateRow_single_self (A : Matrix n n α) (i : n) :
+    (A.updateRow i (Pi.single i 1)).det = (A.submatrix (↑) ((↑) : {k // k ≠ i} → n)).det := by
+  let e := Equiv.sumCompl (· = i)
+  rw [← det_submatrix_equiv_self e]
+  have : (A.updateRow i (Pi.single i 1)).submatrix e e =
+      fromBlocks 1 0 (of fun (a : {k // ¬k = i}) (b : {k // k = i}) ↦ A a b)
+        (A.submatrix (↑) ((↑) : {k // ¬k = i} → n)) := by
+    ext (⟨a, ha⟩ | ⟨a, ha⟩) (⟨b, hb⟩ | ⟨b, hb⟩) <;> subst_vars <;>
+      simp_all [e, updateRow_apply]
+  rw [this, det_fromBlocks_zero₁₂, det_one, one_mul]
+
+/-- Replacing column `j` by `Pi.single j 1` leaves the principal minor obtained by deleting row
+and column `j`. -/
+theorem det_updateCol_single_self (A : Matrix n n α) (j : n) :
+    (A.updateCol j (Pi.single j 1)).det = (A.submatrix (↑) ((↑) : {k // k ≠ j} → n)).det := by
+  rw [← det_transpose, ← updateRow_transpose, det_updateRow_single_self, ← transpose_submatrix,
+    det_transpose]
+
+/-- A diagonal entry of the adjugate is the principal minor obtained by deleting row and
+column `i`. -/
+theorem adjugate_apply_self (A : Matrix n n α) (i : n) :
+    A.adjugate i i = (A.submatrix (↑) ((↑) : {k // k ≠ i} → n)).det := by
+  rw [adjugate_apply, det_updateRow_single_self]
+
 theorem adjugate_conjTranspose [StarRing α] (A : Matrix n n α) : A.adjugateᴴ = adjugate Aᴴ := by
   dsimp only [conjTranspose]
   have : Aᵀ.adjugate.map star = adjugate (Aᵀ.map star) := (starRingEnd α).map_adjugate Aᵀ

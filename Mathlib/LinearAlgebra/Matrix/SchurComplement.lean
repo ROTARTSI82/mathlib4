@@ -471,6 +471,62 @@ theorem det_add_mul {A : Matrix m m α} (U : Matrix m n α)
   rwa [← Matrix.mul_nonsing_inv_cancel_left A (U * V), ← Matrix.mul_add,
     det_mul, ← Matrix.mul_assoc, det_one_add_mul_comm, ← Matrix.mul_assoc]
 
+/-- An entry of the adjugate of `[[A, u vᵀ], [C, D]]` in the upper right block factors as
+`-det (A with column i replaced by u) * det (D with row j replaced by v)`. -/
+theorem adjugate_fromBlocks_vecMulVec_apply₁₂ (A : Matrix m m α) (C : Matrix n m α)
+    (D : Matrix n n α) (u : m → α) (v : n → α) (i : m) (j : n) :
+    (fromBlocks A (vecMulVec u v) C D).adjugate (.inl i) (.inr j) =
+      -((A.updateCol i u).det * (D.updateRow j v).det) := by
+  -- `adj(M)_{ij} = det N`, where row `inr j` of `N` is the unit vector at `inl i`. Adding
+  -- multiples of that row turns column `inl i` into `(u, e_j)`; then subtracting multiples of
+  -- this column clears the upper right block.
+  set N := (fromBlocks A (vecMulVec u v) C D).updateRow (.inr j) (Pi.single (.inl i) 1)
+  set B := N.updateCol (.inl i) (Sum.elim u (Pi.single j 1))
+  have hNB : N.det = B.det := by
+    refine (det_eq_of_forall_row_eq_smul_add_const
+      (Sum.elim (fun r ↦ u r - A r i) (fun r ↦ if r = j then 0 else -C r i)) (.inr j)
+      (by simp) fun a b ↦ ?_).symm
+    rcases a with a | a <;> rcases b with b | b <;>
+      simp [N, B, updateRow_apply, updateCol_apply, Pi.single_apply] <;> split_ifs <;> simp_all
+  have hB : B.det = (fromBlocks (A.updateCol i u) 0 B.toBlocks₂₁ (D.updateRow j (-v))).det := by
+    rw [← det_transpose, eq_comm, ← det_transpose]
+    refine det_eq_of_forall_row_eq_smul_add_const (Sum.elim 0 (-v)) (.inl i) (by simp)
+      fun a b ↦ ?_
+    rcases a with a | a <;> rcases b with b | b <;>
+      simp [N, B, toBlocks₂₁, updateRow_apply, updateCol_apply, Pi.single_apply,
+        vecMulVec_apply, mul_comm]
+    split_ifs <;> simp
+  rw [adjugate_apply, hNB, hB, det_fromBlocks_zero₁₂, ← neg_one_smul α v, det_updateRow_smul]
+  ring
+
+/-- The determinant of a block matrix whose off-diagonal blocks have rank at most one:
+`det [[A, p qᵀ], [u vᵀ, D]] = det A * det D - (vᵀ adj(A) p) * (qᵀ adj(D) u)`.
+Compare `Matrix.det_fromBlocks₁₁`, which assumes that `A` is invertible. -/
+theorem det_fromBlocks_vecMulVec (A : Matrix m m α) (D : Matrix n n α) (p v : m → α)
+    (q u : n → α) :
+    (fromBlocks A (vecMulVec p q) (vecMulVec u v) D).det =
+      A.det * D.det - (v ⬝ᵥ A.adjugate *ᵥ p) * (q ⬝ᵥ D.adjugate *ᵥ u) := by
+  have hsplit : fromBlocks A (vecMulVec p q) (vecMulVec u v) D =
+      fromBlocks A (vecMulVec p q) 0 D + vecMulVec (Sum.elim 0 u) (Sum.elim v 0) := by
+    ext (i | i) (j | j) <;> simp [vecMulVec_apply]
+  have hA : ∑ i, v i * (A.updateCol i p).det = v ⬝ᵥ A.adjugate *ᵥ p := by
+    simp [← cramer_eq_adjugate_mulVec, cramer_apply, dotProduct]
+  have hD : ∑ j, (D.updateRow j q).det * u j = q ⬝ᵥ D.adjugate *ᵥ u := by
+    rw [dotProduct_mulVec, dotProduct, ← mulVec_transpose, adjugate_transpose,
+      ← cramer_eq_adjugate_mulVec]
+    simp [cramer_transpose_apply]
+  have key : Sum.elim v 0 ⬝ᵥ (fromBlocks A (vecMulVec p q) 0 D).adjugate *ᵥ Sum.elim 0 u =
+      -((∑ i, v i * (A.updateCol i p).det) * ∑ j, (D.updateRow j q).det * u j) := by
+    simp only [dotProduct, mulVec, Fintype.sum_sum_type, Sum.elim_inl, Sum.elim_inr,
+      Pi.zero_apply, zero_mul, mul_zero, Finset.sum_const_zero, add_zero, zero_add,
+      adjugate_fromBlocks_vecMulVec_apply₁₂]
+    rw [Finset.sum_mul_sum, ← Finset.sum_neg_distrib]
+    refine Finset.sum_congr rfl fun i _ ↦ ?_
+    rw [← Finset.sum_neg_distrib, Finset.mul_sum]
+    exact Finset.sum_congr rfl fun j _ ↦ by ring
+  rw [hsplit, det_add_vecMulVec, det_fromBlocks_zero₂₁, key, hA, hD]
+  ring
+
 end Det
 
 end CommRing

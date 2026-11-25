@@ -391,6 +391,30 @@ lemma det_piecewise_one_eq_submatrix_det
     · simp only [Finset.piecewise, ite_eq_right i.prop, Matrix.one_apply, Subtype.ext_iff]
   rw [h_blocks, Matrix.det_fromBlocks_zero₂₁, Matrix.det_one, mul_one]
 
+/-- The determinant of `diagonal x + A` is a sum over the subsets `s` of indices, of the product of
+the `x i` for `i ∈ s` times the complementary principal minor of `A`. -/
+theorem det_diagonal_add (x : n → R) (A : Matrix n n R) :
+    (diagonal x + A).det =
+      ∑ s : Finset n, (∏ i ∈ s, x i) * (A.submatrix ((↑) : ↥sᶜ → n) (↑)).det := by
+  let D := (detRowAlternating : (n → R) [⋀^n]→ₗ[R] R).toMultilinearMap
+  change D ((diagonal x).row + A.row) = _
+  rw [D.map_add_univ]
+  refine Finset.sum_congr rfl fun s _ ↦ ?_
+  have h : s.piecewise (diagonal x).row A.row =
+      s.piecewise (fun i ↦ x i • s.piecewise (1 : Matrix n n R).row A.row i)
+        (s.piecewise (1 : Matrix n n R).row A.row) := by
+    ext i j
+    by_cases hi : i ∈ s <;> simp [hi, diagonal_apply, Matrix.one_apply]
+  rw [h, D.map_piecewise_smul, smul_eq_mul, ← Finset.piecewise_compl]
+  exact congrArg _ (det_piecewise_one_eq_submatrix_det A sᶜ)
+
+/-- The determinant of `A + diagonal x` is a sum over the subsets `s` of indices, of the product of
+the `x i` for `i ∈ s` times the complementary principal minor of `A`. -/
+theorem det_add_diagonal (A : Matrix n n R) (x : n → R) :
+    (A + diagonal x).det =
+      ∑ s : Finset n, (∏ i ∈ s, x i) * (A.submatrix ((↑) : ↥sᶜ → n) (↑)).det := by
+  rw [add_comm, det_diagonal_add]
+
 set_option backward.isDefEq.respectTransparency.types false in
 /-- The k-th coefficient of `det (1 + X • M)` equals the sum of all k×k principal minors of M.
 This generalizes `coeff_det_one_add_X_smul_one` (the k = 1 case, which gives the trace)
